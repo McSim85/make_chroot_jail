@@ -142,24 +142,25 @@ cp () {
             until [ "$1" = "$dst" ]; do
               if [ -d $dst ]; then
 #               echo "current link to DIR will be ln -v --force $( readlink -nf $1 ) $dst/$( basename -z $1 )"
-                ln -v --force $( readlink -nf $1 ) $dst/$( basename -z $1 )
+                #ln -v --force $( readlink -nf $1 ) $dst/$( basename -z $1 )
+                ln --force $( readlink -nf $1 ) $dst/$( basename -z $1 )
                 shift
               else
 #               echo "current link NOT to DIR will be ln -v --force $( readlink -nf $1 ) $dst"
-                #echo "lib $1 should linked to $dst"
-                ln -v --force $( readlink -nf $1 ) $dst
+                #ln -v --force $( readlink -nf $1 ) $dst
+                ln --force $( readlink -nf $1 ) $dst
                 shift
               fi
             done 
         else
 #          echo "Start Copy files Recucively"
           #echo " options sre $*"
-          /bin/cp -v $*
+          /bin/cp $*
         fi
     else
         #echo "Start Copy files"
         #echo " options sre $*"
-        /bin/cp -v $*
+        /bin/cp $*
     fi
     
 } # This replace of cp command to make hard links of just copy
@@ -244,7 +245,6 @@ if [ "$(whoami &2>/dev/null)" != "root" ] && [ "$(id -un &2>/dev/null)" != "root
   echo "Error: You must be root to run this script."
   exit 1
 fi
-echo "  OK";
 
 # Check existence of necessary files
 echo "Checking distribution... "
