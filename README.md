@@ -28,8 +28,26 @@ Update 2020-05-11:
  * if you use a single partition, you can use hard links instead of copy (use -l, --link options)
  * removed APPS: cat more less nano (now, you can add it by CLI option -a )
 
+# make_chroot_jail
 
-Help:
+So, why I made another script?
+I would like to make chroot environment for SSH-server with configuration options
+```Match User <username>
+    ChrootDirectory /path/to/chroot
+```
+If you use this option in the /etc/ssh/sshd_config, SSHD reads user environment from the system `/etc/passwd` (not from `/path/to/chroot/etc/passwd`).
+And then chrooted user to the `/path/to/chroot` with $HOME and $SHELL from system's `/etc/passwd`.
+
+New script create all nessesory environment into the `/path/to/chroot` in minimal configuration.
+By default, it allows only ssh with `/bin/bash /bin/sh /bin/cp /bin/ls /bin/mkdir /bin/mv /bin/rm /bin/rmdir /usr/bin/ssh /usr/bin/scp ` and sftp.
+If you need more application, you can add by CLI options.
+- creates user
+- copy or create hard link for all application and libraries
+- don't use PAM in the Jail
+
+
+
+#Help-messages:
 ```
 ./make_chroot_jail.sh -h
 
