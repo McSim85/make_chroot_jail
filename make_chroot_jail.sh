@@ -18,7 +18,7 @@
 #RELEASE="2008-04-26"
 RELEASE="2020-05-07"
 #
-# The latest version of the script is available at
+# The script was taken from
 #   http://www.fuschlberger.net/programs/ssh-scp-sftp-chroot-jail/
 #
 # Feedback is welcome!
@@ -26,6 +26,12 @@ RELEASE="2020-05-07"
 # Thanks for Bugfixes / Enhancements to 
 # Michael Prokop <http://www.michael-prokop.at/chroot/>,
 # Randy K., Randy D., Jonathan Hunter and everybody else.
+#####################################################################
+
+#
+# The latest release was made by Maksim Kramarenko
+#  http://www.k-max.name/
+# 
 #####################################################################
 
 #
