@@ -54,12 +54,12 @@ RELEASE="2020-05-07"
 # Modified by Maksim Kramarenko
 #  http://www.k-max.name/
 # - tested on Debian 9
-# - added more frendly help
+# - added more friendly help
 # - script became more talkative
-# - added lots of CLI options (see -h option)
-# - if you use single partition, you can use hard links instead of copy (use -l, --link options)
+# - Added lots of CLI options (see -h option)
+# - if you use a single partition, you can use hard links instead of copy (use -l, --link options)
 # - fixed some problems with "&>/dev/null" 
-# - removed cat more less nano (now, you can add it by CLI option -a )
+# - removed APPS: cat more less nano (now, you can add it by CLI option -a )
 # 
 #####################################################################
 
