@@ -38,12 +38,13 @@ I would like to make chroot environment for SSH-server with configuration option
 If you use this option in the /etc/ssh/sshd_config, SSHD reads user environment from the system `/etc/passwd` (not from `/path/to/chroot/etc/passwd`).
 And then chrooted user to the `/path/to/chroot` with $HOME and $SHELL from system's `/etc/passwd`.
 
-New script create all nessesory environment into the `/path/to/chroot` in minimal configuration.
-By default, it allows only ssh with `/bin/bash /bin/sh /bin/cp /bin/ls /bin/mkdir /bin/mv /bin/rm /bin/rmdir /usr/bin/ssh /usr/bin/scp ` and sftp.
+New script create all nessesary environment into the `/path/to/chroot` in minimal configuration.
+By default, it allows only ssh with `/bin/bash /usr/bin/dircolors /usr/bin/groups /usr/bin/id /bin/cp /bin/ls /bin/mkdir /bin/mv /bin/rm /bin/rmdir /bin/sh /usr/bin/ssh /usr/bin/scp ` and sftp.
 If you need more application, you can add by CLI options.
 - creates user
 - copy or create hard link for all application and libraries
 - don't use PAM in the Jail
+- update files in the Jail
 
 
 

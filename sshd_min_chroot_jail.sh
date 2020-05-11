@@ -28,32 +28,20 @@ RELEASE="2020-05-07"
 
 #
 # Features:
-# - enable ssh and sftp access in the SSHD chroot-jail ()
-# - create new accounts
-# - move existing accounts to chroot
+# - creates user
+# - copy or create hard link for all application and libraries
+# - don't use PAM in the Jail
+# - update files in the Jail
 #####################################################################
 
 # 
 # CHANGELOG
-# Modified by pmenhart/Benbria:
-# - work on Ubuntu 8.04
-# - added APPS: cat more less nano
-# - copy /lib/terminfo
-# - made the script non-interactive
-# -- create user without a password
-# -- if the user exists and jailed then do nothing
-# -- if the user exists then jail her
-# -- do not create shell if already exists
-#
 # Modified by Maksim Kramarenko 
 #   http://www.k-max.name/
-#   https://github.com/McSim85/make_chroot_jail
 # - tested on Debian and Ubuntu (Multiarch-compatable)
 # - added more friendly help and script became more talkative
 # - Added lots of CLI options (see -h option)
 # - if you use a single partition, you can use hard links instead of copy (use -l, --link options)
-# - fixed some problems with "&>/dev/null" 
-# - removed APPS: cat more less nano (now, you can add it by CLI option -a )
 # 
 #####################################################################
 
@@ -65,7 +53,7 @@ APPS=""
 action=add
 #SHELL=/bin/chroot-shell
 SHELL=/bin/bash
-JAILPATH=/home/jail
+JAILPATH=/chroot
 LINK=cp
 PAM=nocopy
 
@@ -84,7 +72,7 @@ usage () {
   echo "          -c    --config    /path/to/sshd_config    Set path to sshd_config. (\$SSHD_CONFIG)"
   echo "                                                      Default:/etc/ssh/sshd_config"
   echo "          -j,   --jail      /path/to/jail           Set the root of jail."
-  echo "                                                      Default:/home/jail"
+  echo "                                                      Default:/chroot"
   echo "          -l,   --link                              Set hard link mode."
   echo "          -p,   --pam                               Provide PAM libs in the Jail."
   echo "                                                      Default: PAM will not be provided"
@@ -97,38 +85,33 @@ usage () {
   echo "add existing User to chroot-jail:"
   echo "-> $0 -u username"
   echo
-  echo "or specify the chroot-shell file, path where the jail should be located and [--link] option:"
-  echo "-> $0 -u username -s /path/to/chroot-shell -j /path/to/jail --link"
+  echo "or specify the chroot-shell file, path where the jail should be located:"
+  echo "-> $0 -u username -s /path/to/chroot-shell -j /path/to/jail"
   echo "-------------------------------------------------------------"
   echo
-  echo "You can specify [--link] option, if the files in the chroot are "
+  echo "You can specify [--link] option, if files in the chroot are "
   echo "on the same file system as the original files."
   echo "It creates hard links instead of copy files."
   echo "By default, script copies files."
   echo "-------------------------------------------------------------"
   echo
-  echo "You can specify [--nopam] option, in case you don't want to use the PAM inside the jail."
-  echo "E.g. if you use script to build chroot for SSHD."
+  echo "You can specify [--pam] option, in case you want to use the PAM inside the jail."
   echo "-------------------------------------------------------------"
   echo
   echo "or update files in the chroot-jail:"
-  echo "-> $0 --update -s /path/to/chroot-shell -j /path/to/jail --link"
+  echo "-> $0 --update -s /path/to/chroot-shell -j /path/to/jail"
   echo "-------------------------------------------------------------"
   echo
   echo "You can include your application to the chroot by modification of \$APPS variable"
-  echo "-------------------------------------------------------------"
-  echo
   echo "-------------------------------------------------------------"
   echo
   echo "To uninstall:"
   echo " # userdel \$USER"
   echo " # rm -rf /home/jail"
   echo " (this deletes all Users' files!)"
-  echo " # rm -f /bin/chroot-shell"
-  echo " manually delete the User's line from /etc/sudoers"
 }
 
-copy-or-link () {
+copy_or_link () {
     if [ $LINK = "ln" ]; then
         if [ "$1" = "-p" ]; then shift ; fi
         # prevent create Link for recurcive copy
@@ -436,7 +419,7 @@ if ( test "$CHROOT_USERNAME" != "" && id $CHROOT_USERNAME > /dev/null 2>&1 ) ; t
 #    echo "
 #Not entered yes. Exiting...."
   #if [ -d $JAILPATH/home/$CHROOT_USERNAME ] ; then # original string
-  if [ -d /home/$CHROOT_USERNAME && -d $JAILPATH/home/$CHROOT_USERNAME ] ; then
+  if [ -d /home/$CHROOT_USERNAME ] && [ -d $JAILPATH/home/$CHROOT_USERNAME ] ; then
     echo "Already jailed. Exiting...."
     exit 1
   fi
@@ -583,6 +566,17 @@ if [ $action != "update" ]; then
   #grep -e "^$CHROOT_USERNAME:" /etc/shadow >> ${JAILPATH}/etc/shadow
   #chmod 600 ${JAILPATH}/etc/shadow
 
+  echo "
+Please, add the next lines to the end of <${SSHD_CONFIG}> 
+-------------------------------------
+
+Match User $CHROOT_USERNAME
+  ChrootDirectory ${JAILPATH}
+
+------------------------------------
+"
+
+
   # endif for =! update
 fi
 
@@ -632,7 +626,7 @@ for app in $APPS;  do
 		# copying the files, too. Symbolic links cannot be used, because the
 		# original files are outside the chroot.
 		#cp -p $app .$app
-		copy-or-link -p $app .$app
+		copy_or_link -p $app .$app
 
         # get list of necessary libraries
         ldd $app >> ${TMPFILE1}
@@ -656,7 +650,7 @@ for lib in `cat ${TMPFILE2}`; do
 	# too. Symbolic links cannot be used, because the original files are
 	# outside the chroot.
     #cp $lib .$lib
-    copy-or-link $lib .$lib
+    copy_or_link $lib .$lib
 done
 
 #
@@ -675,33 +669,33 @@ done
 # So please test ssh/scp before reporting a bug.
 if [ "$DISTRO" = SUSE ]; then
   #cp /lib/libnss_compat.so.2 /lib/libnss_files.so.2 /lib/libnss_dns.so.2 /lib/libxcrypt.so.1 ${JAILPATH}/lib/
-  copy-or-link /lib/libnss_compat.so.2 /lib/libnss_files.so.2 /lib/libnss_dns.so.2 /lib/libxcrypt.so.1 ${JAILPATH}/lib/
+  copy_or_link /lib/libnss_compat.so.2 /lib/libnss_files.so.2 /lib/libnss_dns.so.2 /lib/libxcrypt.so.1 ${JAILPATH}/lib/
 elif [ "$DISTRO" = FEDORA ]; then
   #cp /lib/libnss_compat.so.2 /lib/libnsl.so.1 /lib/libnss_files.so.2 /lib/ld-linux.so.2 /lib/ld-ldb.so.3 /lib/ld-lsb.so.3 /lib/libnss_dns.so.2 /lib/libxcrypt.so.1 ${JAILPATH}/lib/
-  copy-or-link /lib/libnss_compat.so.2 /lib/libnsl.so.1 /lib/libnss_files.so.2 /lib/ld-linux.so.2 /lib/ld-ldb.so.3 /lib/ld-lsb.so.3 /lib/libnss_dns.so.2 /lib/libxcrypt.so.1 ${JAILPATH}/lib/
+  copy_or_link /lib/libnss_compat.so.2 /lib/libnsl.so.1 /lib/libnss_files.so.2 /lib/ld-linux.so.2 /lib/ld-ldb.so.3 /lib/ld-lsb.so.3 /lib/libnss_dns.so.2 /lib/libxcrypt.so.1 ${JAILPATH}/lib/
   #cp /lib/*.* ${JAILPATH}/lib/
-  copy-or-link /lib/*.* ${JAILPATH}/lib/
+  copy_or_link /lib/*.* ${JAILPATH}/lib/
   #cp /usr/lib/libcrack.so.2 ${JAILPATH}/usr/lib/
-  copy-or-link /usr/lib/libcrack.so.2 ${JAILPATH}/usr/lib/
+  copy_or_link /usr/lib/libcrack.so.2 ${JAILPATH}/usr/lib/
 elif [ "$DISTRO" = REDHAT ]; then
   #cp /lib/libnss_compat.so.2 /lib/libnsl.so.1 /lib/libnss_files.so.2 /lib/ld-linux.so.2 /lib/ld-lsb.so.1 /lib/libnss_dns.so.2 /lib/libxcrypt.so.1 ${JAILPATH}/lib/
-  copy-or-link /lib/libnss_compat.so.2 /lib/libnsl.so.1 /lib/libnss_files.so.2 /lib/ld-linux.so.2 /lib/ld-lsb.so.1 /lib/libnss_dns.so.2 /lib/libxcrypt.so.1 ${JAILPATH}/lib/
+  copy_or_link /lib/libnss_compat.so.2 /lib/libnsl.so.1 /lib/libnss_files.so.2 /lib/ld-linux.so.2 /lib/ld-lsb.so.1 /lib/libnss_dns.so.2 /lib/libxcrypt.so.1 ${JAILPATH}/lib/
   # needed for scp on RHEL
   echo "export LD_LIBRARY_PATH=/usr/kerberos/lib" >> ${JAILPATH}/etc/profile
 elif [ "$DISTRO" = DEBIAN ]; then
   if [ -d /lib/x86_64-linux-gnu/ ]; then
     #cp /lib/x86_64-linux-gnu/libnss_compat.so.2 /lib/x86_64-linux-gnu/libnsl.so.1 /lib/x86_64-linux-gnu/libnss_files.so.2 /lib/x86_64-linux-gnu/libcap.so.2 /lib/x86_64-linux-gnu/libnss_dns.so.2 ${JAILPATH}/lib/
-    copy-or-link /lib/x86_64-linux-gnu/libnss_compat.so.2 /lib/x86_64-linux-gnu/libnsl.so.1 /lib/x86_64-linux-gnu/libnss_files.so.2 /lib/x86_64-linux-gnu/libcap.so.2 /lib/x86_64-linux-gnu/libnss_dns.so.2 ${JAILPATH}/lib/
+    copy_or_link /lib/x86_64-linux-gnu/libnss_compat.so.2 /lib/x86_64-linux-gnu/libnsl.so.1 /lib/x86_64-linux-gnu/libnss_files.so.2 /lib/x86_64-linux-gnu/libcap.so.2 /lib/x86_64-linux-gnu/libnss_dns.so.2 ${JAILPATH}/lib/
   else
     #cp /lib/libnss_compat.so.2 /lib/libnsl.so.1 /lib/libnss_files.so.2 /lib/libcap.so.1 /lib/libnss_dns.so.2 ${JAILPATH}/lib/
-    copy-or-link /lib/libnss_compat.so.2 /lib/libnsl.so.1 /lib/libnss_files.so.2 /lib/libcap.so.1 /lib/libnss_dns.so.2 ${JAILPATH}/lib/
+    copy_or_link /lib/libnss_compat.so.2 /lib/libnsl.so.1 /lib/libnss_files.so.2 /lib/libcap.so.1 /lib/libnss_dns.so.2 ${JAILPATH}/lib/
   fi
   # needed for less and nano 
   # nano and less are optional now
   #cp -ar /lib/terminfo ${JAILPATH}/lib/
 else
   #cp /lib/libnss_compat.so.2 /lib/libnsl.so.1 /lib/libnss_files.so.2 /lib/libcap.so.1 /lib/libnss_dns.so.2 ${JAILPATH}/lib/
-  copy-or-link /lib/libnss_compat.so.2 /lib/libnsl.so.1 /lib/libnss_files.so.2 /lib/libcap.so.1 /lib/libnss_dns.so.2 ${JAILPATH}/lib/
+  copy_or_link /lib/libnss_compat.so.2 /lib/libnsl.so.1 /lib/libnss_files.so.2 /lib/libcap.so.1 /lib/libnss_dns.so.2 ${JAILPATH}/lib/
 fi
 
 if [ $PAM = "copy" ]; then
@@ -715,29 +709,29 @@ if [ $PAM = "copy" ]; then
   # if you are using PAM you need stuff from /etc/pam.d/ in the jail,
   echo "Copying files from /etc/pam.d/ to jail"
   #cp /etc/pam.d/* ${JAILPATH}/etc/pam.d/
-  copy-or-link /etc/pam.d/* ${JAILPATH}/etc/pam.d/
+  copy_or_link /etc/pam.d/* ${JAILPATH}/etc/pam.d/
 
   # ...and of course the PAM-modules...
   echo "Copying PAM-Modules to jail"
   if [ -d /lib/security ]; then
       #cp /lib/security/* ${JAILPATH}/lib/
-      copy-or-link /lib/security/* ${JAILPATH}/lib/
+      copy_or_link /lib/security/* ${JAILPATH}/lib/
   fi
   # this is needed for Ubuntu 8.04, but will not hurt on 12.04 neither
   if [ -d /lib/x86_64-linux-gnu/security ]; then
     #cp -r /lib/x86_64-linux-gnu/security ${JAILPATH}/lib/
-    copy-or-link -r /lib/x86_64-linux-gnu/security ${JAILPATH}/lib/
+    copy_or_link -r /lib/x86_64-linux-gnu/security ${JAILPATH}/lib/
   fi
 
   # ...and something else useful for PAM
   #cp -r /etc/security ${JAILPATH}/etc/
-  copy-or-link -r /etc/security ${JAILPATH}/etc/
+  copy_or_link -r /etc/security ${JAILPATH}/etc/
   #cp /etc/login.defs ${JAILPATH}/etc/
-  copy-or-link /etc/login.defs ${JAILPATH}/etc/
+  copy_or_link /etc/login.defs ${JAILPATH}/etc/
 
   if [ -f /etc/DIR_COLORS ] ; then
     #cp /etc/DIR_COLORS ${JAILPATH}/etc/
-    copy-or-link /etc/DIR_COLORS ${JAILPATH}/etc/
+    copy_or_link /etc/DIR_COLORS ${JAILPATH}/etc/
   fi 
 fi # endif for checking $PAM
 
@@ -746,5 +740,6 @@ if [ $LINK != "ln" ]; then
   chown root.root ${JAILPATH}/bin/su
   chmod 700 ${JAILPATH}/bin/su
 fi
+
 
 exit
