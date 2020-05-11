@@ -28,7 +28,7 @@ Update 2020-05-11:
  * if you use a single partition, you can use hard links instead of copy (use -l, --link options)
  * removed APPS: cat more less nano (now, you can add it by CLI option -a )
 
-# make_chroot_jail
+# sshd_min_chroot_jail.sh
 
 So, why I made another script?
 I would like to make chroot environment for SSH-server with configuration options
