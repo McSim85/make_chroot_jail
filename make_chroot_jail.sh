@@ -15,10 +15,9 @@
 #####################################################################
 
 # first Release: 2004-07-30
-#RELEASE="2008-04-26"
 RELEASE="2020-05-07"
 #
-# The original commit contains unmodified copy of the script from
+# TThe original script was taken from
 #   http://www.fuschlberger.net/programs/ssh-scp-sftp-chroot-jail/
 #
 # Feedback is welcome!
@@ -26,6 +25,14 @@ RELEASE="2020-05-07"
 # Thanks for Bugfixes / Enhancements to 
 # Michael Prokop <http://www.michael-prokop.at/chroot/>,
 # Randy K., Randy D., Jonathan Hunter and everybody else.
+#####################################################################
+
+#
+# Features:
+# - enable scp and sftp in the chroot-jail
+# - use one directory (default /home/jail/) as chroot for all users
+# - create new accounts
+# - move existing accounts to chroot
 #####################################################################
 
 # 
@@ -54,14 +61,6 @@ RELEASE="2020-05-07"
 # - fixed some problems with "&>/dev/null" 
 # - removed cat more less nano (now, you can add it by CLI option -a )
 # 
-#####################################################################
-
-#
-# Features:
-# - enable scp and sftp in the chroot-jail
-# - use one directory (default /home/jail/) as chroot for all users
-# - create new accounts
-# - move existing accounts to chroot
 #####################################################################
 
 # path to sshd's config file: needed for automatic detection of the locaten of
@@ -250,22 +249,22 @@ echo "  OK";
 # Check existence of necessary files
 echo "Checking distribution... "
 if [ -f /etc/debian_version ];
-  then echo -n "  Supported Distribution found"
+  then echo -n "  Supported Distribution found:"
        echo "  System is running Debian Linux"
        DISTRO=DEBIAN;
        ### Check Ubuntu version (e.g. hardy, precise) 
        #UBUNTU_CODENAME=`lsb_release -c | cut -f 2` # DO NOT NEED IT ANYMORE
        # added more universal way
 elif [ -f /etc/SuSE-release ];
-  then echo -n "  Supported Distribution found"
+  then echo -n "  Supported Distribution found^"
        echo "  System is running SuSE Linux"
        DISTRO=SUSE;
 elif [ -f /etc/fedora-release ];
-  then echo -n "  Supported Distribution found"
+  then echo -n "  Supported Distribution found:"
        echo "  System is running Fedora Linux"
        DISTRO=FEDORA;
 elif [ -f /etc/redhat-release ];
-  then echo -n "  Supported Distribution found"
+  then echo -n "  Supported Distribution found:"
        echo "  System is running Red Hat Linux"
        DISTRO=REDHAT;
 else echo -e "  failed...........\nThis script works best on Debian, Red Hat, Fedora and SuSE Linux!\nLet's try it nevertheless....\nIf some program files cannot be found adjust the respective path in line 98\n"
@@ -288,7 +287,7 @@ fi
 #echo $APPS
 
 # Check existence of necessary files
-echo -n "Checking for which... " 
+echo -n "Checking for which... "
 #if [ -f $(which which) ] ;
 # not good because if which does not exist I look for an 
 # empty filename and get OK nevertheless
@@ -305,7 +304,7 @@ zypper search --provides which          # on SUSE
 exit 1
 fi
 
-echo -n "Checking for chroot..." 
+echo -n "Checking for chroot..."
 if [ `which chroot` ];
   then echo "  OK";
   else echo "  failed
@@ -320,7 +319,7 @@ zypper search --provides chroot             # on SUSE
 exit 1
 fi
 
-echo -n "Checking for sudo..." 
+echo -n "Checking for sudo..."
 if [ `which sudo` ]; then
   echo "  OK";
 else 
@@ -336,7 +335,7 @@ zypper search --provides sudo           # on SUSE
 exit 1
 fi
 
-echo -n "Checking for dirname..." 
+echo -n "Checking for dirname..."
 if [ `which dirname` ]; then
   echo "  OK";
 else 
@@ -352,7 +351,7 @@ zypper search --provides dirname            # on SUSE
 exit 1
 fi
 
-echo -n "Checking for readlink..." 
+echo -n "Checking for readlink..."
 if [ `which readlink` ]; then
   echo "  OK";
 else 
@@ -368,7 +367,7 @@ zypper search --provides readlink            # on SUSE
 exit 1
 fi
 
-echo -n "Checking for awk..." 
+echo -n "Checking for awk..."
 if [ `which awk` ]; then
   echo "  OK
 ";
@@ -516,7 +515,7 @@ echo
 
 # if we only want to update the files in the jail
 # skip the creation of the new account
-if [ $action != "update" ]; then # added 
+if [ $action != "update" ]; then
 
   # Modifiy /etc/sudoers to enable chroot-ing for users
   # must be removed by hand if account is deleted
