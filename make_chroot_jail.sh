@@ -18,7 +18,7 @@
 #RELEASE="2008-04-26"
 RELEASE="2020-05-07"
 #
-# The script was taken from
+# The original commit contains unmodified copy of the script from
 #   http://www.fuschlberger.net/programs/ssh-scp-sftp-chroot-jail/
 #
 # Feedback is welcome!
@@ -28,9 +28,31 @@ RELEASE="2020-05-07"
 # Randy K., Randy D., Jonathan Hunter and everybody else.
 #####################################################################
 
+# 
+# Modified by pmenhart/Benbria:
+# - work on Ubuntu 8.04
+# - added APPS: cat more less nano
+# - copy /lib/terminfo
+# - made the script non-interactive
+# -- create user without a password
+# -- if the user exists and jailed then do nothing
+# -- if the user exists then jail her
+# -- do not create shell if already exists
 #
-# The latest release was made by Maksim Kramarenko
+# Original: http://www.devcu.com/forums/topic/560-chrootjail-users-for-sshscp-ubuntu-1204/
+# Based on http://www.fuschlberger.net/programs/ssh-scp-sftp-chroot-jail/
+#####################################################################
+
+#
+# Modified by Maksim Kramarenko
 #  http://www.k-max.name/
+# - tested on Debian 9
+# - added more frendly help
+# - script became more talkative
+# - added lots of CLI options (see -h option)
+# - if you use single partition, you can use hard links instead of copy (use -l, --link options)
+# - fixed some problems with "&>/dev/null" 
+# - removed cat more less nano (now, you can add it by CLI option -a )
 # 
 #####################################################################
 
@@ -108,7 +130,6 @@ usage () {
   echo " (this deletes all Users' files!)"
   echo " # rm -f /bin/chroot-shell"
   echo " manually delete the User's line from /etc/sudoers"
-#  exit
 }
 
 cp () {
@@ -126,20 +147,20 @@ cp () {
                 shift
               else
 #               echo "current link NOT to DIR will be ln -v --force $( readlink -nf $1 ) $dst"
-                echo "lib $1 should linked to $dst"
+                #echo "lib $1 should linked to $dst"
                 ln -v --force $( readlink -nf $1 ) $dst
                 shift
               fi
             done 
         else
-          echo "Start Copy files Recucively"
+#          echo "Start Copy files Recucively"
           #echo " options sre $*"
           /bin/cp -v $*
         fi
     else
-        echo "Start Copy files"
+        #echo "Start Copy files"
         #echo " options sre $*"
-        /bin/cp -v "$*"
+        /bin/cp -v $*
     fi
     
 } # This replace of cp command to make hard links of just copy
@@ -217,14 +238,11 @@ if [ -z "$PATH" ] ; then
 fi
 
 echo
-echo Release: $RELEASE
+echo $0 Release: $RELEASE
 echo
 
-echo "Am I root?  "
 if [ "$(whoami &2>/dev/null)" != "root" ] && [ "$(id -un &2>/dev/null)" != "root" ] ; then
-  echo "  NO!
-
-Error: You must be root to run this script."
+  echo "Error: You must be root to run this script."
   exit 1
 fi
 echo "  OK";
@@ -232,19 +250,22 @@ echo "  OK";
 # Check existence of necessary files
 echo "Checking distribution... "
 if [ -f /etc/debian_version ];
-  then echo "  Supported Distribution found"
+  then echo -n "  Supported Distribution found"
        echo "  System is running Debian Linux"
        DISTRO=DEBIAN;
+       ### Check Ubuntu version (e.g. hardy, precise) 
+       #UBUNTU_CODENAME=`lsb_release -c | cut -f 2` # DO NOT NEED IT ANYMORE
+       # added more universal way
 elif [ -f /etc/SuSE-release ];
-  then echo "  Supported Distribution found"
+  then echo -n "  Supported Distribution found"
        echo "  System is running SuSE Linux"
        DISTRO=SUSE;
 elif [ -f /etc/fedora-release ];
-  then echo "  Supported Distribution found"
+  then echo -n "  Supported Distribution found"
        echo "  System is running Fedora Linux"
        DISTRO=FEDORA;
 elif [ -f /etc/redhat-release ];
-  then echo "  Supported Distribution found"
+  then echo -n "  Supported Distribution found"
        echo "  System is running Red Hat Linux"
        DISTRO=REDHAT;
 else echo -e "  failed...........\nThis script works best on Debian, Red Hat, Fedora and SuSE Linux!\nLet's try it nevertheless....\nIf some program files cannot be found adjust the respective path in line 98\n"
@@ -267,7 +288,7 @@ fi
 #echo $APPS
 
 # Check existence of necessary files
-echo "Checking for which... " 
+echo -n "Checking for which... " 
 #if [ -f $(which which) ] ;
 # not good because if which does not exist I look for an 
 # empty filename and get OK nevertheless
@@ -284,7 +305,7 @@ zypper search --provides which          # on SUSE
 exit 1
 fi
 
-echo "Checking for chroot..." 
+echo -n "Checking for chroot..." 
 if [ `which chroot` ];
   then echo "  OK";
   else echo "  failed
@@ -299,7 +320,7 @@ zypper search --provides chroot             # on SUSE
 exit 1
 fi
 
-echo "Checking for sudo..." 
+echo -n "Checking for sudo..." 
 if [ `which sudo` ]; then
   echo "  OK";
 else 
@@ -315,7 +336,7 @@ zypper search --provides sudo           # on SUSE
 exit 1
 fi
 
-echo "Checking for dirname..." 
+echo -n "Checking for dirname..." 
 if [ `which dirname` ]; then
   echo "  OK";
 else 
@@ -331,7 +352,7 @@ zypper search --provides dirname            # on SUSE
 exit 1
 fi
 
-echo "Checking for readlink..." 
+echo -n "Checking for readlink..." 
 if [ `which readlink` ]; then
   echo "  OK";
 else 
@@ -347,7 +368,7 @@ zypper search --provides readlink            # on SUSE
 exit 1
 fi
 
-echo "Checking for awk..." 
+echo -n "Checking for awk..." 
 if [ `which awk` ]; then
   echo "  OK
 ";
@@ -391,7 +412,7 @@ fi
 #if !(grep -v "^#" /etc/ssh/sshd_config | grep -i sftp-server /etc/ssh/sshd_config | awk  '{ print $3}' &> /dev/null); then
 APPS="$APPS $SFTP_SERVER"
 
-# Get accountname to create / move # do not need it anymore
+# Get accountname to create / move # do not need it anymore because it passed by CLI
 #CHROOT_USERNAME=$1
 
 # if ! [ -z "$2" ] ; then
@@ -411,47 +432,54 @@ APPS="$APPS $SFTP_SERVER"
 
 # Check if user already exists and ask for confirmation
 # we have to trust that root knows what she is doing when saying 'yes'
-if ( test $CHROOT_USERNAME != "" && id $CHROOT_USERNAME > /dev/null 2>&1 ) ; then {
-echo "
------------------------------
-User $CHROOT_USERNAME exists. 
+if ( test "$CHROOT_USERNAME" != "" && id $CHROOT_USERNAME > /dev/null 2>&1 ) ; then {
+  echo -n "User $CHROOT_USERNAME exists."
+#TODO: add to CLI interactive mode
+#echo "-----------------------------
+#User $CHROOT_USERNAME exists. 
 
-Are you sure you want to modify the users home directory and lock him into the
-chroot directory?
-Are you REALLY sure?
-Say only yes if you absolutely know what you are doing!"
-  read -p "(yes/no) -> " MODIFYUSER
-  if [ "$MODIFYUSER" != "yes" ]; then
-    echo "
-Not entered yes. Exiting...."
+#Are you sure you want to modify the users home directory and lock him into the
+#chroot directory?
+#Are you REALLY sure?
+#Say only yes if you absolutely know what you are doing!"
+#  read -p "(yes/no) -> " MODIFYUSER
+#  if [ "$MODIFYUSER" != "yes" ]; then
+#    echo "
+#Not entered yes. Exiting...."
+  if [ -d $JAILPATH/home/$CHROOT_USERNAME ] ; then
+    echo "Already jailed. Exiting...."
     exit 1
   fi
-}
+  echo "Adding the user to jail."
+  MODIFYUSER="yes"
+  }
 else
   CREATEUSER="yes"
 fi
 
 # Create $SHELL (shell for jailed accounts)
 if [ -f ${SHELL} ] ; then
-    echo "
------------------------------
-The file $SHELL exists. 
-Probably it was created by this script.
+  echo "The file $SHELL already exists."
 
-Are you sure you want to overwrite it?
-(you want to say yes for example if you are running the script for the second
-time when adding more than one account to the jail)"
-    read -p "(yes/no) -> " OVERWRITE
-    if [ "$OVERWRITE" != "yes" ]; then
-      echo "
-    Not entered yes. Exiting...."
-      exit 1
-    fi
+#    echo "
+#-----------------------------
+#The file $SHELL exists. 
+#Probably it was created by this script.
+#
+#Are you sure you want to overwrite it?
+#(you want to say yes for example if you are running the script for the second
+#time when adding more than one account to the jail)"
+#    read -p "(yes/no) -> " OVERWRITE
+#    if [ "$OVERWRITE" != "yes" ]; then
+#      echo "
+#    Not entered yes. Exiting...."
+#      exit 1
+#    fi
 else
-    echo "Creating $SHELL"
-    echo '#!/bin/sh' > $SHELL
-    echo "`which sudo` `which chroot` $JAILPATH /bin/su - \$USER" \"\$@\" >> $SHELL
-    chmod 755 $SHELL
+  echo "Creating $SHELL"
+  echo '#!/bin/sh' > $SHELL
+  echo "`which sudo` `which chroot` $JAILPATH /bin/su - \$USER" \"\$@\" >> $SHELL
+  chmod 755 $SHELL
 fi
 
 # make common jail for everybody if inexistent
@@ -488,77 +516,76 @@ echo
 
 # if we only want to update the files in the jail
 # skip the creation of the new account
-if [ $action != "update" ]; then
+if [ $action != "update" ]; then # added 
 
-    # Modifiy /etc/sudoers to enable chroot-ing for users
-    # must be removed by hand if account is deleted
-    echo "Modifying /etc/sudoers"
-    echo "$CHROOT_USERNAME       ALL=NOPASSWD: `which chroot`, /bin/su - $CHROOT_USERNAME" >> /etc/sudoers
+  # Modifiy /etc/sudoers to enable chroot-ing for users
+  # must be removed by hand if account is deleted
+  echo "Modifying /etc/sudoers"
+  echo "$CHROOT_USERNAME       ALL=NOPASSWD: `which chroot`, /bin/su - $CHROOT_USERNAME" >> /etc/sudoers
 
-    # Define HomeDir for simple referencing
-    HOMEDIR="$JAILPATH/home/$CHROOT_USERNAME"
+  # Define HomeDir for simple referencing
+  HOMEDIR="$JAILPATH/home/$CHROOT_USERNAME"
 
-    # Create new account, setting $SHELL to the above created script and
-    # $HOME to $JAILPATH/home/*
-    if [ "$CREATEUSER" != "yes" ] ; then
-        echo "
-    Not creating new User account
-    Modifying User \"$CHROOT_USERNAME\" 
-    Copying files in $CHROOT_USERNAME's \$HOME to \"$HOMEDIR\"
+  # Create new account, setting $SHELL to the above created script and
+  # $HOME to $JAILPATH/home/*
+  if [ "$CREATEUSER" != "yes" ] ; then
+    echo "  Not creating new User account
+  Modifying User \"$CHROOT_USERNAME\" 
+  Copying files in $CHROOT_USERNAME's \$HOME to \"$HOMEDIR\"
     "
-        usermod -d "$HOMEDIR" -m -s "$SHELL" $CHROOT_USERNAME && chmod 700 "$HOMEDIR"
-    fi # endif usermod
+    usermod -d "$HOMEDIR" -m -s "$SHELL" $CHROOT_USERNAME && chmod 700 "$HOMEDIR"
+  fi # endif usermod
 
-    if [ "$CREATEUSER" = "yes" ] ; then {
-        echo "Adding User \"$CHROOT_USERNAME\" to system"
-        useradd -m -d "$HOMEDIR" -s "$SHELL" $CHROOT_USERNAME && chmod 700 "$HOMEDIR"
+  if [ "$CREATEUSER" = "yes" ] ; then {
+    echo "Adding User \"$CHROOT_USERNAME\" to system (no password)"
+    useradd -m -d "$HOMEDIR" -s "$SHELL" $CHROOT_USERNAME && chmod 700 "$HOMEDIR"
 
-            # Enter password for new account
-            if !(passwd $CHROOT_USERNAME);
-              then echo "Passwords are probably not the same, try again."
-              exit 1;
-            fi
-            echo
-        }
-    fi # endif useradd
+    # Enter password for new account - TODO for interactive mode
+    #if !(passwd $CHROOT_USERNAME);
+    #   then echo "Passwords are probably not the same, try again."
+    #      exit 1;
+    #    fi
+    #    echo
+  }
+  fi # endif useradd
 
-    # Create /usr/bin/groups in the jail
-    echo "#!/bin/bash" > usr/bin/groups
-    echo "id -Gn" >> usr/bin/groups
-    chmod 755 usr/bin/groups
+  # Create /usr/bin/groups in the jail
+  echo "#!/bin/bash" > usr/bin/groups
+  echo "id -Gn" >> usr/bin/groups
+  chmod 755 usr/bin/groups
 
-    # Add users to etc/passwd
-    #
-    # check if file exists (ie we are not called for the first time)
-    # if yes skip root's entry and do not overwrite the file
-    if [ ! -f etc/passwd ] ; then
-        grep /etc/passwd -e "^root" > ${JAILPATH}/etc/passwd
-    fi
-    if [ ! -f etc/group ] ; then
-        grep /etc/group -e "^root" > ${JAILPATH}/etc/group
-    # add the group for all users to etc/group (otherwise there is a nasty error
-    # message and probably because of that changing directories doesn't work with
-    # winSCP)
-        grep /etc/group -e "^users" >> ${JAILPATH}/etc/group
-    fi
+  # Add users to etc/passwd
+  #
+  # check if file exists (ie we are not called for the first time)
+  # if yes skip root's entry and do not overwrite the file
+  if [ ! -f etc/passwd ] ; then
+    grep /etc/passwd -e "^root" > ${JAILPATH}/etc/passwd
+  fi
+  if [ ! -f etc/group ] ; then
+    grep /etc/group -e "^root" > ${JAILPATH}/etc/group
+  # add the group for all users to etc/group (otherwise there is a nasty error
+  # message and probably because of that changing directories doesn't work with
+  # winSCP)
+    grep /etc/group -e "^users" >> ${JAILPATH}/etc/group
+  fi
 
-    # grep the username which was given to us from /etc/passwd and add it
-    # to ./etc/passwd replacing the $HOME with the directory as it will then 
-    # appear in the jail
-    echo "Adding User $CHROOT_USERNAME to jail"
-    grep -e "^$CHROOT_USERNAME:" /etc/passwd | \
-     sed -e "s#$JAILPATH##"      \
-         -e "s#$SHELL#/bin/bash#"  >> ${JAILPATH}/etc/passwd
+  # grep the username which was given to us from /etc/passwd and add it
+  # to ./etc/passwd replacing the $HOME with the directory as it will then 
+  # appear in the jail
+  echo "Adding User $CHROOT_USERNAME to jail"
+  grep -e "^$CHROOT_USERNAME:" /etc/passwd | \
+   sed -e "s#$JAILPATH##"      \
+       -e "s#$SHELL#/bin/bash#"  >> ${JAILPATH}/etc/passwd
 
-    # if the system uses one account/one group we write the
-    # account's group to etc/group
-    grep -e "^$CHROOT_USERNAME:" /etc/group >> ${JAILPATH}/etc/group
+  # if the system uses one account/one group we write the
+  # account's group to etc/group
+  grep -e "^$CHROOT_USERNAME:" /etc/group >> ${JAILPATH}/etc/group
 
-    # write the user's line from /etc/shadow to /home/jail/etc/shadow
-    grep -e "^$CHROOT_USERNAME:" /etc/shadow >> ${JAILPATH}/etc/shadow
-    chmod 600 ${JAILPATH}/etc/shadow
+  # write the user's line from /etc/shadow to /home/jail/etc/shadow
+  grep -e "^$CHROOT_USERNAME:" /etc/shadow >> ${JAILPATH}/etc/shadow
+  chmod 600 ${JAILPATH}/etc/shadow
 
-    # endif for =! update
+  # endif for =! update
 fi
 
 # Copy the apps and the related libs
@@ -584,12 +611,13 @@ echo "Copying necessary library-files to jail (may take some time)"
 # create temporary files with mktemp, if that doesn't work for some reason use
 # the old method with $HOME/ldlist[2] (so I don't have to check the existence
 # of the mktemp package / binary at the beginning
-# 
+#
+# Maksim K
 #
 # Don't know why, but redirection operator "&>/dev/null" is not working on Debian 9
 # (where /bin/sh -> /bin/dash), so, I've replaced it to the ">/dev/null 2>&1".
-TMPFILE1=`mktemp -q` >/dev/null 2>&1 || TMPFILE1="${HOME}/ldlist"; if [ -x ${TMPFILE1} ]; then mv -v ${TMPFILE1} ${TMPFILE1}.bak ; fi 
-TMPFILE2=`mktemp -q` >/dev/null 2>&1 || TMPFILE2="${HOME}/ldlist2"; if [ -x ${TMPFILE2} ]; then mv -v ${TMPFILE2} ${TMPFILE2}.bak ; fi 
+TMPFILE1=`mktemp -q` >/dev/null 2>&1 || TMPFILE1="${HOME}/ldlist"; if [ -x ${TMPFILE1} ]; then mv -v ${TMPFILE1} ${TMPFILE1}.bak;fi 
+TMPFILE2=`mktemp -q` >/dev/null 2>&1 || TMPFILE2="${HOME}/ldlist2"; if [ -x ${TMPFILE2} ]; then mv -v ${TMPFILE2} ${TMPFILE2}.bak;fi 
 
 for app in $APPS;  do
     # First of all, check that this application exists
@@ -615,7 +643,8 @@ done
 # Clear out any old temporary file before we start
 for libs in `cat ${TMPFILE1}`; do
    frst_char="`echo $libs | cut -c1`"
-   if [ "$frst_char" = "/" ]; then
+   if [ "\"$frst_char\"" = "\"/\"" ]; then
+#   if [ "$frst_char" = "/" ]; then
      echo "$libs" >> ${TMPFILE2}
    fi
 done
@@ -655,7 +684,18 @@ elif [ "$DISTRO" = REDHAT ]; then
   # needed for scp on RHEL
   echo "export LD_LIBRARY_PATH=/usr/kerberos/lib" >> ${JAILPATH}/etc/profile
 elif [ "$DISTRO" = DEBIAN ]; then
-  cp /lib/libnss_compat.so.2 /lib/libnsl.so.1 /lib/libnss_files.so.2 /lib/libcap.so.1 /lib/libnss_dns.so.2 ${JAILPATH}/lib/
+  # due to migration to Multiarch - https://wiki.ubuntu.com/MultiarchSpec
+  # check /lib/x86_64-linux-gnu/ directory is much more universal way
+  # ??? DO WE NEED IT FOR SUSE AND REDHAT
+  #if [ "$UBUNTU_CODENAME" = "hardy" ]; then
+  if [ -d /lib/x86_64-linux-gnu/ ]; then
+    cp /lib/x86_64-linux-gnu/libnss_compat.so.2 /lib/x86_64-linux-gnu/libnsl.so.1 /lib/x86_64-linux-gnu/libnss_files.so.2 /lib/x86_64-linux-gnu/libcap.so.2 /lib/x86_64-linux-gnu/libnss_dns.so.2 ${JAILPATH}/lib/
+  else
+    cp /lib/libnss_compat.so.2 /lib/libnsl.so.1 /lib/libnss_files.so.2 /lib/libcap.so.1 /lib/libnss_dns.so.2 ${JAILPATH}/lib/
+  fi
+  # needed for less and nano 
+  # nano and less are optional now
+  #cp -ar /lib/terminfo ${JAILPATH}/lib/
 else
   cp /lib/libnss_compat.so.2 /lib/libnsl.so.1 /lib/libnss_files.so.2 /lib/libcap.so.1 /lib/libnss_dns.so.2 ${JAILPATH}/lib/
 fi
@@ -677,9 +717,9 @@ if [ $PAM = "copy" ]; then
   if [ -d /lib/security ]; then
       cp /lib/security/* ${JAILPATH}/lib/
   fi
-  
-  if [ -d /lib64/security ]; then
-      cp /lib64/security/* ${JAILPATH}/lib64/security/
+  # this is needed for Ubuntu 8.04, but will not hurt on 12.04 neither
+  if [ -d /lib/x86_64-linux-gnu/security ]; then
+    cp -r /lib/x86_64-linux-gnu/security ${JAILPATH}/lib/
   fi
 
   # ...and something else useful for PAM
