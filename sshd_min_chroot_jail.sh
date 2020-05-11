@@ -48,10 +48,8 @@ RELEASE="2020-05-07"
 # path to sshd's config file: needed for automatic detection of the locaten of
 # the sftp-server binary
 SSHD_CONFIG="/etc/ssh/sshd_config"
-# 
 APPS=""
 action=add
-#SHELL=/bin/chroot-shell
 SHELL=/bin/bash
 JAILPATH=/chroot
 LINK=cp
@@ -107,7 +105,7 @@ usage () {
   echo
   echo "To uninstall:"
   echo " # userdel \$USER"
-  echo " # rm -rf /home/jail"
+  echo " # rm -rf /chroot"
   echo " (this deletes all Users' files!)"
 }
 
@@ -193,9 +191,9 @@ if [ $action = "update" ]; then
 else
   echo "!!! You are going to <$action> the user <$CHROOT_USERNAME> into the Jail <$JAILPATH>."
 fi
-echo "Shell to make the jail is <$SHELL>. Files will be <${LINK}>'ed."
+echo "Shell for Jail'ed user is <$SHELL>. Files will be <${LINK}>'ed."
 echo "Config of SSHd is <$SSHD_CONFIG>. PAM modules will be <$PAM>'ed."
-echo "List of additional application into the Jail is <$APPS>."
+echo "List of additional application into the Jail are <$APPS>."
 echo "
 -----------------------------
 Is it correct?"
@@ -243,27 +241,19 @@ fi
 
 # Specify the apps you want to copy to the jail
 if [ "$DISTRO" = SUSE ]; then
-  #APPS="${APPS} /bin/bash /bin/cp /usr/bin/dircolors /bin/ls /bin/mkdir /bin/mv /bin/rm /bin/rmdir /bin/sh /bin/su /usr/bin/groups /usr/bin/id /usr/bin/netcat /usr/bin/rsync /usr/bin/ssh /usr/bin/scp /sbin/unix_chkpwd"
   APPS="${APPS} /bin/bash /usr/bin/dircolors /usr/bin/groups /usr/bin/id /bin/cp /bin/ls /bin/mkdir /bin/mv /bin/rm /bin/rmdir /bin/sh /usr/bin/ssh /usr/bin/scp"
 elif [ "$DISTRO" = FEDORA ]; then
-  #APPS="${APPS} /bin/bash /bin/cp /usr/bin/dircolors /bin/ls /bin/mkdir /bin/mv /bin/rm /bin/rmdir /bin/sh /bin/su /usr/bin/groups /usr/bin/id /usr/bin/nc /usr/bin/rsync /usr/bin/ssh /usr/bin/scp /sbin/unix_chkpwd"
   APPS="${APPS} /bin/bash /usr/bin/dircolors /usr/bin/groups /usr/bin/id /bin/cp /bin/ls /bin/mkdir /bin/mv /bin/rm /bin/rmdir /bin/sh /usr/bin/ssh /usr/bin/scp"
 elif [ "$DISTRO" = REDHAT ]; then
-  #APPS="${APPS} /bin/bash /bin/cp /usr/bin/dircolors /bin/ls /bin/mkdir /bin/mv /bin/rm /bin/rmdir /bin/sh /bin/su /usr/bin/groups /usr/bin/id /usr/bin/nc /usr/bin/rsync /usr/bin/ssh /usr/bin/scp /sbin/unix_chkpwd"
   APPS="${APPS} /bin/bash /usr/bin/dircolors /usr/bin/groups /usr/bin/id /bin/cp /bin/ls /bin/mkdir /bin/mv /bin/rm /bin/rmdir /bin/sh /usr/bin/ssh /usr/bin/scp"
 elif [ "$DISTRO" = DEBIAN ]; then
-  #APPS="${APPS} /bin/bash /bin/cp /usr/bin/dircolors /bin/ls /bin/mkdir /bin/mv /bin/rm /bin/rmdir /bin/sh /bin/su /usr/bin/groups /usr/bin/id /usr/bin/rsync /usr/bin/ssh /usr/bin/scp /sbin/unix_chkpwd"
   APPS="${APPS} /bin/bash /usr/bin/dircolors /usr/bin/groups /usr/bin/id /bin/cp /bin/ls /bin/mkdir /bin/mv /bin/rm /bin/rmdir /bin/sh /usr/bin/ssh /usr/bin/scp"
 else
-  #APPS="${APPS} /bin/bash /bin/cp /usr/bin/dircolors /bin/ls /bin/mkdir /bin/mv /bin/rm /bin/rmdir /bin/sh /bin/su /usr/bin/groups /usr/bin/id /usr/bin/rsync /usr/bin/ssh /usr/bin/scp /usr/sbin/unix_chkpwd"
   APPS="${APPS} /bin/bash /usr/bin/dircolors /usr/bin/groups /usr/bin/id /bin/cp /bin/ls /bin/mkdir /bin/mv /bin/rm /bin/rmdir /bin/sh /usr/bin/ssh /usr/bin/scp"
 fi
 
 # Check existence of necessary files
 echo -n "Checking for which... "
-#if [ -f $(which which) ] ;
-# not good because if which does not exist I look for an 
-# empty filename and get OK nevertheless
 if ( test -f /usr/bin/which ) || ( test -f /bin/which ) || ( test -f /sbin/which ) || ( test -f /usr/sbin/which );
   then echo "  OK";
   else echo "  failed
@@ -276,37 +266,6 @@ zypper search --provides which          # on SUSE
 "
 exit 1
 fi
-
-#echo -n "Checking for chroot..."
-#if [ `which chroot` ];
-#  then echo "  OK";
-#  else echo "  failed
-#
-#chroot not found!
-#Please install chroot-package/binary! (usually named like coreutils)
-#You can try to find it by:
-#yum whatprovides */chroot                   # on RHEL
-#apt-file search /chroot | grep /chroot$     # on Deb-based
-#zypper search --provides chroot             # on SUSE
-#"
-#exit 1
-#fi
-
-#echo -n "Checking for sudo..."
-#if [ `which sudo` ]; then
-#  echo "  OK";
-#else 
-#  echo "  failed
-#
-#sudo not found!
-#Please install sudo-package/binary! (named like sudo)
-#You can try to find it by:
-#yum whatprovides */sudo                 # on RHEL
-#apt-file search /sudo | /grep sudo$     # on Deb-based
-#zypper search --provides sudo           # on SUSE
-#"
-#exit 1
-#fi
 
 echo -n "Checking for dirname..."
 if [ `which dirname` ]; then
@@ -362,12 +321,6 @@ fi
 # (uncommented) line with sftp-server filename. If neither exists, just skip
 # this step and continue without sftp-server
 #
-#if  (test ! -f /etc/ssh/sshd_config &> /dev/null); then
-#  echo "
-#File /etc/ssh/sshd_config not found.
-#Not checking for path to sftp-server.
-#  ";
-#else
 if [ ! -f ${SSHD_CONFIG} ]
 then
    echo "File ${SSHD_CONFIG} not found."
@@ -381,26 +334,7 @@ else
   fi
 fi
 
-#if !(grep -v "^#" /etc/ssh/sshd_config | grep -i sftp-server /etc/ssh/sshd_config | awk  '{ print $3}' &> /dev/null); then
 APPS="$APPS $SFTP_SERVER"
-
-# Get accountname to create / move # do not need it anymore because it passed by CLI
-#CHROOT_USERNAME=$1
-
-# if ! [ -z "$2" ] ; then
-  # SHELL=$2
-# else
-  # SHELL=/bin/chroot-shell
-# fi
-
-# if ! [ -z "$3" ] ; then
-  # JAILPATH=$3
-# else
-  # JAILPATH=/home/jail
-# fi
-
-# Exit if user already exists
-#id $CHROOT_USERNAME > /dev/null 2>&1 && { echo "User exists."; echo "Exiting."; exit 1; }
 
 # Check if user already exists and ask for confirmation
 # we have to trust that root knows what she is doing when saying 'yes'
@@ -430,31 +364,6 @@ else
   CREATEUSER="yes"
 fi
 
-## Create $SHELL (shell for jailed accounts)
-#if [ -f ${SHELL} ] ; then
-#  echo "The file $SHELL already exists."
-#
-##    echo "
-##-----------------------------
-##The file $SHELL exists. 
-##Probably it was created by this script.
-##
-##Are you sure you want to overwrite it?
-##(you want to say yes for example if you are running the script for the second
-##time when adding more than one account to the jail)"
-##    read -p "(yes/no) -> " OVERWRITE
-##    if [ "$OVERWRITE" != "yes" ]; then
-##      echo "
-##    Not entered yes. Exiting...."
-##      exit 1
-##    fi
-#else
-#  echo "Creating $SHELL"
-#  echo '#!/bin/sh' > $SHELL
-#  echo "`which sudo` `which chroot` $JAILPATH /bin/su - \$USER" \"\$@\" >> $SHELL
-#  chmod 755 $SHELL
-#fi
-
 # make common jail for everybody if inexistent
 if [ ! -d ${JAILPATH} ] ; then
   mkdir -p ${JAILPATH}
@@ -472,15 +381,6 @@ for directory in $JAILDIRS ; do
 done
 echo
 
-# Comment in the following lines if your apache can't read the directories and
-# uses the security contexts
-# Fix security contexts so Apache can read files
-#CHCON=$(`which chcon`)
-#if [ -n "$CHCON" ] && [ -x $CHCON ]; then
-#    $CHCON -t home_root_t $JAILPATH/home
-#    $CHCON -t user_home_dir_t $JAILPATH/home/$CHROOT_USERNAME
-#fi
-
 # Creating necessary devices
 [ -r $JAILPATH/dev/urandom ] || mknod $JAILPATH/dev/urandom       c 1 9
 [ -r $JAILPATH/dev/null ]    || mknod -m 666 $JAILPATH/dev/null   c 1 3
@@ -491,13 +391,7 @@ echo
 # skip the creation of the new account
 if [ $action != "update" ]; then
 
-  ## Modifiy /etc/sudoers to enable chroot-ing for users
-  ## must be removed by hand if account is deleted
-  #echo "Modifying /etc/sudoers"
-  #echo "$CHROOT_USERNAME       ALL=NOPASSWD: `which chroot`, /bin/su - $CHROOT_USERNAME" >> /etc/sudoers
-
   # Define HomeDir for simple referencing
-  #HOMEDIR="$JAILPATH/home/$CHROOT_USERNAME"
   HOMEDIR="/home/$CHROOT_USERNAME"
 
   # Create new account, setting $SHELL to the above created script and
@@ -511,8 +405,6 @@ if [ $action != "update" ]; then
     if [ ! -d "${JAILPATH}${HOMEDIR}" ] ; then # Make copy of HOMEDIR in the Jail
       mkdir ${JAILPATH}${HOMEDIR}
       cp -p -r $HOMEDIR ${JAILPATH}${HOMEDIR}
-      #chmod 700 ${JAILPATH}${HOMEDIR}
-      #chown $CHROOT_USERNAME ${JAILPATH}${HOMEDIR}
     fi
   fi # endif usermod
 
@@ -529,11 +421,6 @@ if [ $action != "update" ]; then
         echo
   }
   fi # endif useradd
-
-  ## Create /usr/bin/groups in the jail
-  #echo "#!/bin/bash" > usr/bin/groups
-  #echo "id -Gn" >> usr/bin/groups
-  #chmod 755 usr/bin/groups
 
   # Add users to etc/passwd
   #
@@ -575,8 +462,7 @@ Match User $CHROOT_USERNAME
 
 ------------------------------------
 "
-
-
+  
   # endif for =! update
 fi
 
@@ -625,7 +511,6 @@ for app in $APPS;  do
 		# original files you should be able to use hard links instead of
 		# copying the files, too. Symbolic links cannot be used, because the
 		# original files are outside the chroot.
-		#cp -p $app .$app
 		copy_or_link -p $app .$app
 
         # get list of necessary libraries
@@ -649,7 +534,6 @@ for lib in `cat ${TMPFILE2}`; do
 	# files you should be able to use hard links instead of copying the files,
 	# too. Symbolic links cannot be used, because the original files are
 	# outside the chroot.
-    #cp $lib .$lib
     copy_or_link $lib .$lib
 done
 
@@ -668,69 +552,44 @@ done
 # ones for reasons of backward compatibility).
 # So please test ssh/scp before reporting a bug.
 if [ "$DISTRO" = SUSE ]; then
-  #cp /lib/libnss_compat.so.2 /lib/libnss_files.so.2 /lib/libnss_dns.so.2 /lib/libxcrypt.so.1 ${JAILPATH}/lib/
   copy_or_link /lib/libnss_compat.so.2 /lib/libnss_files.so.2 /lib/libnss_dns.so.2 /lib/libxcrypt.so.1 ${JAILPATH}/lib/
 elif [ "$DISTRO" = FEDORA ]; then
-  #cp /lib/libnss_compat.so.2 /lib/libnsl.so.1 /lib/libnss_files.so.2 /lib/ld-linux.so.2 /lib/ld-ldb.so.3 /lib/ld-lsb.so.3 /lib/libnss_dns.so.2 /lib/libxcrypt.so.1 ${JAILPATH}/lib/
   copy_or_link /lib/libnss_compat.so.2 /lib/libnsl.so.1 /lib/libnss_files.so.2 /lib/ld-linux.so.2 /lib/ld-ldb.so.3 /lib/ld-lsb.so.3 /lib/libnss_dns.so.2 /lib/libxcrypt.so.1 ${JAILPATH}/lib/
-  #cp /lib/*.* ${JAILPATH}/lib/
   copy_or_link /lib/*.* ${JAILPATH}/lib/
-  #cp /usr/lib/libcrack.so.2 ${JAILPATH}/usr/lib/
   copy_or_link /usr/lib/libcrack.so.2 ${JAILPATH}/usr/lib/
 elif [ "$DISTRO" = REDHAT ]; then
-  #cp /lib/libnss_compat.so.2 /lib/libnsl.so.1 /lib/libnss_files.so.2 /lib/ld-linux.so.2 /lib/ld-lsb.so.1 /lib/libnss_dns.so.2 /lib/libxcrypt.so.1 ${JAILPATH}/lib/
   copy_or_link /lib/libnss_compat.so.2 /lib/libnsl.so.1 /lib/libnss_files.so.2 /lib/ld-linux.so.2 /lib/ld-lsb.so.1 /lib/libnss_dns.so.2 /lib/libxcrypt.so.1 ${JAILPATH}/lib/
   # needed for scp on RHEL
   echo "export LD_LIBRARY_PATH=/usr/kerberos/lib" >> ${JAILPATH}/etc/profile
 elif [ "$DISTRO" = DEBIAN ]; then
   if [ -d /lib/x86_64-linux-gnu/ ]; then
-    #cp /lib/x86_64-linux-gnu/libnss_compat.so.2 /lib/x86_64-linux-gnu/libnsl.so.1 /lib/x86_64-linux-gnu/libnss_files.so.2 /lib/x86_64-linux-gnu/libcap.so.2 /lib/x86_64-linux-gnu/libnss_dns.so.2 ${JAILPATH}/lib/
     copy_or_link /lib/x86_64-linux-gnu/libnss_compat.so.2 /lib/x86_64-linux-gnu/libnsl.so.1 /lib/x86_64-linux-gnu/libnss_files.so.2 /lib/x86_64-linux-gnu/libcap.so.2 /lib/x86_64-linux-gnu/libnss_dns.so.2 ${JAILPATH}/lib/
   else
-    #cp /lib/libnss_compat.so.2 /lib/libnsl.so.1 /lib/libnss_files.so.2 /lib/libcap.so.1 /lib/libnss_dns.so.2 ${JAILPATH}/lib/
     copy_or_link /lib/libnss_compat.so.2 /lib/libnsl.so.1 /lib/libnss_files.so.2 /lib/libcap.so.1 /lib/libnss_dns.so.2 ${JAILPATH}/lib/
   fi
-  # needed for less and nano 
-  # nano and less are optional now
-  #cp -ar /lib/terminfo ${JAILPATH}/lib/
 else
-  #cp /lib/libnss_compat.so.2 /lib/libnsl.so.1 /lib/libnss_files.so.2 /lib/libcap.so.1 /lib/libnss_dns.so.2 ${JAILPATH}/lib/
   copy_or_link /lib/libnss_compat.so.2 /lib/libnsl.so.1 /lib/libnss_files.so.2 /lib/libcap.so.1 /lib/libnss_dns.so.2 ${JAILPATH}/lib/
 fi
 
 if [ $PAM = "copy" ]; then
-  # if you are using a 64 bit system and have strange problems with login comment
-  # the following lines in, perhaps it works then (motto: if you can't find the
-  # needed library just copy all of them)
-  #
-  #cp /lib/*.* ${JAILPATH}/lib/
-  #cp /lib/lib64/*.* ${JAILPATH}/lib/lib64/ 
-
   # if you are using PAM you need stuff from /etc/pam.d/ in the jail,
   echo "Copying files from /etc/pam.d/ to jail"
-  #cp /etc/pam.d/* ${JAILPATH}/etc/pam.d/
   copy_or_link /etc/pam.d/* ${JAILPATH}/etc/pam.d/
 
   # ...and of course the PAM-modules...
   echo "Copying PAM-Modules to jail"
   if [ -d /lib/security ]; then
-      #cp /lib/security/* ${JAILPATH}/lib/
       copy_or_link /lib/security/* ${JAILPATH}/lib/
   fi
-  # this is needed for Ubuntu 8.04, but will not hurt on 12.04 neither
   if [ -d /lib/x86_64-linux-gnu/security ]; then
-    #cp -r /lib/x86_64-linux-gnu/security ${JAILPATH}/lib/
     copy_or_link -r /lib/x86_64-linux-gnu/security ${JAILPATH}/lib/
   fi
 
   # ...and something else useful for PAM
-  #cp -r /etc/security ${JAILPATH}/etc/
   copy_or_link -r /etc/security ${JAILPATH}/etc/
-  #cp /etc/login.defs ${JAILPATH}/etc/
   copy_or_link /etc/login.defs ${JAILPATH}/etc/
 
   if [ -f /etc/DIR_COLORS ] ; then
-    #cp /etc/DIR_COLORS ${JAILPATH}/etc/
     copy_or_link /etc/DIR_COLORS ${JAILPATH}/etc/
   fi 
 fi # endif for checking $PAM
