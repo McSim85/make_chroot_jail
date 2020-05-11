@@ -22,10 +22,10 @@ Additional changes:
 
 Update 2020-05-11:
  * tested on Debian 9
- * added more frendly help
+ * added more friendly help
  * script became more talkative
- * added lots of CLI options (see -h option)
- * if you use single partition, you can use hard links instead of copy (use -l, --link options)
+ * Added lots of CLI options (see -h option)
+ * if you use a single partition, you can use hard links instead of copy (use -l, --link options)
  * removed APPS: cat more less nano (now, you can add it by CLI option -a )
 
 
