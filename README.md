@@ -32,7 +32,8 @@ Update 2020-05-11:
 
 So, why I made another script?
 I would like to make chroot environment for SSH-server with configuration options
-```Match User <username>
+```
+Match User <username>
     ChrootDirectory /path/to/chroot
 ```
 If you use this option in the /etc/ssh/sshd_config, SSHD reads user environment from the system `/etc/passwd` (not from `/path/to/chroot/etc/passwd`).
