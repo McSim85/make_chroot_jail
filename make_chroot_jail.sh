@@ -17,7 +17,7 @@
 # first Release: 2004-07-30
 RELEASE="2020-05-07"
 #
-# TThe original script was taken from
+# The original script was taken from
 #   http://www.fuschlberger.net/programs/ssh-scp-sftp-chroot-jail/
 #
 # Feedback is welcome!
@@ -84,7 +84,7 @@ usage () {
   echo "          -h,   --help                  Show this message"
   echo 
   echo "          Options:"
-  echo "          -a    --apps     \"/path/app1 /p/to/app2\"  Add your apps to avaliable inside of Jail."
+  echo "          -a    --apps     \"/path/app1 /p/to/app2\"  Add your apps to be avaliable inside of Jail."
   echo "                                                      Space-separated quoted list of paths"
   echo "          -c    --config    /path/to/sshd_config    Set path to sshd_config. (\$SSHD_CONFIG)"
   echo "                                                      Default:/etc/ssh/sshd_config"
@@ -92,7 +92,8 @@ usage () {
   echo "                                                      Default:/home/jail"
   echo "          -l,   --link                              Set hard link mode."
   echo "          -n,   --nopam                             Do not copy PAM libs."
-  echo "          -s,   --shell     /path/to/chroot-shell   Set name of shell for chrooted user."
+  echo "          -s,   --shell     /path/to/chroot-shell   Set name of shell. "
+  echo "                                                    User will be chrooted by this script."
 	echo "                                                      Default:/bin/chroot-shell"
 	echo
   echo "-------------------------------------------------------------"
@@ -111,7 +112,8 @@ usage () {
   echo "By default, script copies files."
   echo "-------------------------------------------------------------"
   echo
-  echo "You can specify [--nopam] option, in case you don't want to use the PAM inside the jail"
+  echo "You can specify [--nopam] option, in case you don't want to use the PAM inside the jail."
+  echo "E.g. if you use script to build chroot for SSHD."
   echo "-------------------------------------------------------------"
   echo
   echo "or update files in the chroot-jail:"
@@ -220,7 +222,7 @@ if [ $action = "update" ]; then
 else
   echo "!!! You are going to <$action> the user <$CHROOT_USERNAME> into the Jail <$JAILPATH>."
 fi
-echo "Shell into the jail is <$SHELL>. Files will be <${LINK}>'ed."
+echo "Shell to make the jail is <$SHELL>. Files will be <${LINK}>'ed."
 echo "Config of SSHd is <$SSHD_CONFIG>. PAM modules will be <$PAM>'ed."
 echo "List of additional application into the Jail is <$APPS>."
 echo "
